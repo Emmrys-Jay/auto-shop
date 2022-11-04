@@ -42,6 +42,9 @@ go run main.go
 
 - Demo output should be in form specified in the screenshot below.
 
+![Screenshot from 2022-11-04 13-34-10](https://user-images.githubusercontent.com/63949797/200057365-2798a6c7-8ee6-47c0-9ca3-d6293e511b32.png)
+![Screenshot from 2022-11-04 13-34-14](https://user-images.githubusercontent.com/63949797/200057372-d8991411-7e9a-43d5-8929-acd69df4f5e7.png)
+
 
 - Play around with the store methods in `main.go` to simulate how an auto store 
 manager will use this project to manage sales and purchases.
