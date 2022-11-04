@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/Emmrys-Jay/auto-shop/product"
 	"github.com/Emmrys-Jay/auto-shop/store"
@@ -9,8 +11,14 @@ import (
 )
 
 func main() {
+
+	// Set the output writer where the DEMO results will be printed to.
+	// This variable allows the store manager to specify an output stream.
+	// In this DEMO, the output stream is os.Stdout (the OS console)
+	var w io.Writer = os.Stdout
+
 	// DEMO
-	util.Message("DEMO")
+	util.Message(w, "DEMO")
 
 	availableProducts := make(store.Store)
 	soldProducts := make(store.Store)
@@ -38,28 +46,28 @@ func main() {
 		},
 	}
 
-	util.Message("ADD PRODUCTS")
+	util.Message(w, "ADD PRODUCTS")
 
-	ids := availableProducts.AddProduct(&p)
+	ids := availableProducts.AddProduct(w, &p)
 	for i := 0; i < len(ids); i++ {
 		fmt.Printf("You added product %v with id %v\n", p[i].BrandName+" "+p[i].Model, ids[i])
 	}
 
-	util.Message("LIST PRODUCTS")
+	util.Message(w, "LIST PRODUCTS")
 
-	availableProducts.ListProducts()
+	availableProducts.ListProducts(w)
 
-	util.Message("SELL PRODUCT")
+	util.Message(w, "SELL PRODUCT")
 
-	availableProducts.SellProduct(ids[0], 10, &soldProducts)
+	availableProducts.SellProduct(w, ids[0], 10, &soldProducts)
 
-	fmt.Println()
+	fmt.Fprintln(w)
 
-	availableProducts.SellProduct(ids[1], 20, &soldProducts)
+	availableProducts.SellProduct(w, ids[1], 20, &soldProducts)
 
-	util.Message("LIST SOLD ITEMS")
+	util.Message(w, "LIST SOLD ITEMS")
 
-	availableProducts.ListSoldItems(&soldProducts)
+	availableProducts.ListSoldItems(w, &soldProducts)
 
-	util.Message("END OF DEMO")
+	util.Message(w, "END OF DEMO")
 }
