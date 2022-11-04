@@ -7,7 +7,7 @@ import (
 
 // StoreProduct represents the core attributes of every product that could be in the store.
 // It is not an exhaustive list of attributes for every product, some products may have more
-// attributes, but they will impliment this interface as far as they have these methods.
+// attributes, but they will implement this interface as far as they have these methods.
 type StoreProduct interface {
 	Name() string
 

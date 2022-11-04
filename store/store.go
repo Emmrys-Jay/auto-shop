@@ -3,7 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"io"
 	"strconv"
 
 	"github.com/Emmrys-Jay/auto-shop/product"
@@ -31,21 +31,21 @@ type (
 )
 
 // NoOfProductsForSale calculates the number of products available in the store
-func (s *Store) NoOfProductForSale() {
+func (s *Store) NoOfProductsForSale(w io.Writer) {
 	quantity := 0
 
 	for _, v := range *s {
-		if v.Quantity() > 0 {
+		if v.InStock() {
 			quantity++
 		}
 	}
 
-	fmt.Printf("There are %v products up for sale\n", quantity)
+	fmt.Fprintf(w, "There are %v products up for sale\n", quantity)
 }
 
 // AddProduct adds new products to the store
-func (s *Store) AddProduct(req *[]product.AddCarRequest) []string {
-	fmt.Println("Adding products to store...")
+func (s *Store) AddProduct(w io.Writer, req *[]product.AddCarRequest) []string {
+	fmt.Fprintln(w, "Adding products to store...")
 	ids := make([]string, 0)
 
 	for _, v := range *req {
@@ -61,42 +61,42 @@ func (s *Store) AddProduct(req *[]product.AddCarRequest) []string {
 		ids = append(ids, id.String())
 	}
 
-	fmt.Printf("Added %v products successfully...\n", len(*req))
+	fmt.Fprintf(w, "Added %v products successfully...\n", len(*req))
 
 	return ids
 }
 
 // ListProducts prints all products available in the store
-func (s *Store) ListProducts() {
+func (s *Store) ListProducts(w io.Writer) {
 	for _, v := range *s {
-		if v.Quantity() > 0 {
-			v.DisplayProduct(os.Stdout)
+		if v.InStock() {
+			v.DisplayProduct(w)
 		}
 	}
 }
 
 // SellProduct sells a product by updating its quantity, and adds the sold product to
 // the store for products sold.
-func (s *Store) SellProduct(id string, quantity int, salesStore *Store) {
+func (s *Store) SellProduct(w io.Writer, id string, quantity int, salesStore *Store) {
 	if _, ok := (*s)[id]; ok {
 		(*s)[id].Sell(quantity)
 	} else {
-		fmt.Println("Product you specified does not exist")
+		fmt.Fprintln(w, "Product you specified does not exist")
 		return
 	}
 
 	if _, ok := (*salesStore)[id]; !ok {
 		(*salesStore)[id] = (*s)[id]
-		(*salesStore)[id].Sell(-(*s)[id].Quantity() + quantity)
+		(*salesStore)[id].Sell((*s)[id].Quantity() - quantity)
 	} else {
 		(*salesStore)[id].Sell(-quantity)
 	}
 
-	fmt.Printf("Congrats! You just sold %v %v, with id %v\n", quantity, (*s)[id].Name(), id)
+	fmt.Fprintf(w, "Congrats! You just sold %v %v, with id %v\n", quantity, (*s)[id].Name(), id)
 }
 
 // ListSoldItems displays all products that has been sold from the store.
-func (s *Store) ListSoldItems(salesStore *Store) {
+func (s *Store) ListSoldItems(w io.Writer, salesStore *Store) {
 	si := make([]SoldItems, 0)
 	totalPrice := 0.0
 
@@ -121,9 +121,9 @@ func (s *Store) ListSoldItems(salesStore *Store) {
 
 	jsonDisplay, err := json.MarshalIndent(siDisplay, "", " ")
 	if err != nil {
-		fmt.Println("error: Could not encode JSON")
+		fmt.Fprintln(w, "error: Could not encode JSON")
 		return
 	}
 
-	fmt.Println(string(jsonDisplay))
+	fmt.Fprintln(w, string(jsonDisplay))
 }
