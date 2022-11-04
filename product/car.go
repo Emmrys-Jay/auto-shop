@@ -2,7 +2,7 @@ package product
 
 import "fmt"
 
-// AddCarRequest is used to create a car in main.
+// AddCarRequest is used to create a car variable in main.
 type AddCarRequest struct {
 	ProductType string
 	BrandName   string
@@ -73,22 +73,22 @@ func (c *Car) BrandName() string {
 	return c.brandName
 }
 
-// Color retuns the color of a Car.
+// Color returns the color of a Car.
 func (c *Car) Color() string {
 	return c.color
 }
 
-// FuelType returns the fuel type of a Car.
+// FuelType returns the fuel-type of a Car.
 func (c *Car) FuelType() string {
 	return c.fuelType
 }
 
-// ProductType returns the product type of a Car.
+// ProductType returns the product-type of a Car.
 func (c *Car) ProductType() string {
 	return c.productType
 }
 
-// Sell alters the quantity of a Car based on the parameter passed in.
+// Sell alters the quantity of a Car based on the quantity parameter passed in.
 func (c *Car) Sell(quantity int) {
-	c.quantity -= quantity
+	c.quantity = c.quantity - quantity
 }
