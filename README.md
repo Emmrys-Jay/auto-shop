@@ -1,7 +1,7 @@
 # auto-shop
 A micro tool for managing materials in an auto-mechanics shop.
 
-This project was written for alt-school's second semester exam.
+This project was written for [Alt-school's](https://www.altschoolafrica.com/) second semester exam.
 
 ## Description
 
