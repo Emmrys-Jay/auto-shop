@@ -18,6 +18,15 @@ The store manager will be able to perform the following:
 - Sell an item
 - Show a list of sold items and the total price
 
+## Added Features
+
+- Validate each added product on it's product type field
+- Create a set containing all default valid types
+- Include a function that allows a store manager add a new type
+- Display all store products in JSON format
+- Create two generic types - Vehicle and Accessory - which can accomodate all possible
+products that could be added to autoshop
+
 ## Setup
 
 To use this project, you must have `golang 1.18` or higher installed. If installed, go through
