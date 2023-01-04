@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
-	"github.com/Emmrys-Jay/auto-shop/product"
+	"github.com/Emmrys-Jay/auto-shop/internal/product"
 	"github.com/google/uuid"
 )
 
@@ -30,6 +31,27 @@ type (
 	}
 )
 
+// ProductTypes is a set which stores all valid product types
+var ProductTypes = map[string]bool{
+	"accessory":  true,
+	"vehicle":    true,
+	"van":        true,
+	"car":        true,
+	"suv":        true,
+	"ambulance":  true,
+	"bus":        true,
+	"motorcycle": true,
+	"bike":       true,
+	"scooter":    true,
+}
+
+// AddProductType adds a product type to the list of valid product types
+func AddProductType(w io.Writer, productType string) {
+	ProductTypes[productType] = true
+
+	fmt.Fprintf(w, "Successfully added a product of type %s", productType)
+}
+
 // NoOfProductsForSale calculates the number of products available in the store
 func (s *Store) NoOfProductsForSale(w io.Writer) {
 	quantity := 0
@@ -44,24 +66,41 @@ func (s *Store) NoOfProductsForSale(w io.Writer) {
 }
 
 // AddProduct adds new products to the store
-func (s *Store) AddProduct(w io.Writer, req *[]product.AddCarRequest) []string {
+func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
+	if len(req) == 0 {
+		fmt.Fprintf(w, "No products specified")
+	}
+
 	fmt.Fprintln(w, "Adding products to store...")
 	ids := make([]string, 0)
 
-	for _, v := range *req {
-		car := product.CarRequestToCar(&v)
+	var count int
+	var invalidProducts string
+	for _, v := range req {
+		if !ProductTypes[strings.ToLower(v.GetProductType())] {
+			invalidProducts += " " + v.GetProductType()
+			continue
+		}
+		count++
 		id := uuid.New()
 
 		var p = &product.Product{
 			ID:           id.String(),
-			StoreProduct: car,
+			StoreProduct: v,
 		}
 
 		(*s)[id.String()] = p
 		ids = append(ids, id.String())
 	}
 
-	fmt.Fprintf(w, "Added %v products successfully...\n", len(*req))
+	if invalidProducts == "" {
+		fmt.Fprintf(w, "Added %v products successfully...\n", count)
+	} else if count != 0 {
+		fmt.Fprintf(w, "Added %v products successfully...\n", count)
+		fmt.Fprintf(w, "Products with types %s are invalid and were not added", strings.ReplaceAll(strings.TrimSpace(invalidProducts), " ", ", "))
+	} else {
+		fmt.Fprintf(w, "All product types specified are invalid")
+	}
 
 	return ids
 }
@@ -87,7 +126,7 @@ func (s *Store) SellProduct(w io.Writer, id string, quantity int, salesStore *St
 
 	if _, ok := (*salesStore)[id]; !ok {
 		(*salesStore)[id] = (*s)[id]
-		(*salesStore)[id].Sell((*s)[id].Quantity() - quantity)
+		(*salesStore)[id].Sell((*s)[id].GetQuantity() - quantity)
 	} else {
 		(*salesStore)[id].Sell(-quantity)
 	}
@@ -104,13 +143,13 @@ func (s *Store) ListSoldItems(w io.Writer, salesStore *Store) {
 		s := SoldItems{
 			ID:           v.ID,
 			Name:         v.Name(),
-			QuantitySold: v.Quantity(),
-			PriceSold:    v.Price(),
+			QuantitySold: v.GetQuantity(),
+			PriceSold:    v.GetPrice(),
 		}
 
 		si = append(si, s)
 
-		price, _ := strconv.ParseFloat(v.Price(), 64)
+		price, _ := strconv.ParseFloat(v.GetPrice(), 64)
 		totalPrice += price
 	}
 
