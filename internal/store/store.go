@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
+	"log"
 	"strings"
 
 	"github.com/Emmrys-Jay/auto-shop/internal/product"
@@ -13,7 +13,11 @@ import (
 
 type (
 	// Store models the store for available products and sold products
-	Store map[string]*product.Product
+	Store struct {
+		AvailableProducts map[string]*product.Product
+		SoldProducts      map[string]*SoldItems
+		Orders            map[string]*OrderedItems
+	}
 
 	// SoldItemsDisplay models the structure products will be displayed from
 	// the sold items store
@@ -22,51 +26,31 @@ type (
 		SoldItems  []SoldItems `json:"products_sold"`
 	}
 
-	// SoldItems is a sub model of SoldItemsDisplay
+	// SoldItems is a struct which models a sold item
 	SoldItems struct {
-		ID           string `json:"id"`
-		Name         string `json:"name"`
+		ProductID    string `json:"product_id"`
+		ProductName  string `json:"product_name"`
 		QuantitySold int    `json:"quantity_sold"`
-		PriceSold    string `json:"price_sold"`
+	}
+
+	// OrderedItems is a struct which models an ordered item
+	OrderedItems struct {
+		ProductID    string  `json:"id"`
+		ProductName  string  `json:"product_name"`
+		PriceSold    float64 `json:"price_sold"`
+		QuantitySold int     `json:"quantity_sold"`
 	}
 )
 
-// ProductTypes is a set which stores all valid product types
-var ProductTypes = map[string]bool{
-	"accessory":  true,
-	"vehicle":    true,
-	"van":        true,
-	"car":        true,
-	"suv":        true,
-	"ambulance":  true,
-	"bus":        true,
-	"motorcycle": true,
-	"bike":       true,
-	"scooter":    true,
-}
-
 // AddProductType adds a product type to the list of valid product types
 func AddProductType(w io.Writer, productType string) {
-	ProductTypes[productType] = true
+	product.IsValid[productType] = true
 
 	fmt.Fprintf(w, "Successfully added a product of type %s", productType)
 }
 
-// NoOfProductsForSale calculates the number of products available in the store
-func (s *Store) NoOfProductsForSale(w io.Writer) {
-	quantity := 0
-
-	for _, v := range *s {
-		if v.InStock() {
-			quantity++
-		}
-	}
-
-	fmt.Fprintf(w, "There are %v products up for sale\n", quantity)
-}
-
 // AddProduct adds new products to the store
-func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
+func (s *Store) AddProducts(w io.Writer, req []product.Product) []string {
 	if len(req) == 0 {
 		fmt.Fprintf(w, "No products specified")
 	}
@@ -77,7 +61,7 @@ func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
 	var count int
 	var invalidProducts string
 	for _, v := range req {
-		if !ProductTypes[strings.ToLower(v.GetProductType())] {
+		if !product.IsValid[strings.ToLower(v.GetProductType())] {
 			invalidProducts += " " + v.GetProductType()
 			continue
 		}
@@ -85,11 +69,12 @@ func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
 		id := uuid.New()
 
 		var p = &product.Product{
-			ID:           id.String(),
-			StoreProduct: v,
+			StoreProduct: v.StoreProduct,
+			Quantity:     v.Quantity,
+			Price:        v.Price,
 		}
 
-		(*s)[id.String()] = p
+		s.AvailableProducts[id.String()] = p
 		ids = append(ids, id.String())
 	}
 
@@ -97,7 +82,7 @@ func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
 		fmt.Fprintf(w, "Added %v products successfully...\n", count)
 	} else if count != 0 {
 		fmt.Fprintf(w, "Added %v products successfully...\n", count)
-		fmt.Fprintf(w, "Products with types %s are invalid and were not added", strings.ReplaceAll(strings.TrimSpace(invalidProducts), " ", ", "))
+		fmt.Fprintf(w, "Products with type(s) %s are invalid and were not added", strings.ReplaceAll(strings.TrimSpace(invalidProducts), " ", ", "))
 	} else {
 		fmt.Fprintf(w, "All product types specified are invalid")
 	}
@@ -107,7 +92,7 @@ func (s *Store) AddProducts(w io.Writer, req []product.StoreProduct) []string {
 
 // ListProducts prints all products available in the store
 func (s *Store) ListProducts(w io.Writer) {
-	for _, v := range *s {
+	for _, v := range s.AvailableProducts {
 		if v.InStock() {
 			v.DisplayProduct(w)
 		}
@@ -116,53 +101,92 @@ func (s *Store) ListProducts(w io.Writer) {
 
 // SellProduct sells a product by updating its quantity, and adds the sold product to
 // the store for products sold.
-func (s *Store) SellProduct(w io.Writer, id string, quantity int, salesStore *Store) {
-	if _, ok := (*s)[id]; ok {
-		(*s)[id].Sell(quantity)
+func (s *Store) SellProduct(w io.Writer, id string, quantity int) {
+	var product *product.Product
+	if _, ok := s.AvailableProducts[id]; ok {
+		product = s.AvailableProducts[id]
+		product.Sell(quantity)
 	} else {
 		fmt.Fprintln(w, "Product you specified does not exist")
 		return
 	}
 
-	if _, ok := (*salesStore)[id]; !ok {
-		(*salesStore)[id] = (*s)[id]
-		(*salesStore)[id].Sell((*s)[id].GetQuantity() - quantity)
+	if _, ok := s.SoldProducts[id]; !ok {
+		s.SoldProducts[id] = &SoldItems{
+			ProductID:    id,
+			ProductName:  product.Name(),
+			QuantitySold: quantity,
+		}
 	} else {
-		(*salesStore)[id].Sell(-quantity)
+		s.SoldProducts[id].QuantitySold += quantity
 	}
 
-	fmt.Fprintf(w, "Congrats! You just sold %v %v, with id %v\n", quantity, (*s)[id].Name(), id)
+	orderID := uuid.New()
+	s.Orders[orderID.String()] = &OrderedItems{
+		ProductID:    id,
+		ProductName:  product.Name(),
+		PriceSold:    product.Price,
+		QuantitySold: quantity,
+	}
+
+	fmt.Fprintf(w, "Congrats! You just sold %d %s(s), with id %v\n", quantity, product.Name(), id)
+}
+
+// NoOfProductsForSale calculates the number of products available in the store
+func (s *Store) NoOfProductsForSale(w io.Writer) {
+	quantity := 0
+
+	for _, v := range s.AvailableProducts {
+		if v.InStock() {
+			quantity++
+		}
+	}
+
+	fmt.Fprintf(w, "There are %v products up for sale\n", quantity)
 }
 
 // ListSoldItems displays all products that has been sold from the store.
-func (s *Store) ListSoldItems(w io.Writer, salesStore *Store) {
-	si := make([]SoldItems, 0)
-	totalPrice := 0.0
-
-	for _, v := range *salesStore {
-		s := SoldItems{
-			ID:           v.ID,
-			Name:         v.Name(),
-			QuantitySold: v.GetQuantity(),
-			PriceSold:    v.GetPrice(),
+func (s *Store) ListSoldItems(w io.Writer) {
+	for _, v := range s.SoldProducts {
+		result, err := json.MarshalIndent(v, "", "\t")
+		if err != nil {
+			log.Fatalln("error: could not print all sold products: %w", err)
 		}
 
-		si = append(si, s)
+		fmt.Fprintln(w, string(result))
+	}
+}
 
-		price, _ := strconv.ParseFloat(v.GetPrice(), 64)
-		totalPrice += price
+// ListOrderedItems displays all products that has been sold from the store.
+func (s *Store) ListOrderedItems(w io.Writer) {
+	for _, v := range s.Orders {
+		result, err := json.MarshalIndent(v, "", "\t")
+		if err != nil {
+			log.Fatalln("error: could not print all ordered products: %w", err)
+		}
+
+		fmt.Fprintln(w, string(result))
+	}
+}
+
+// TotalPriceOfProductsLeft displays all products that has been sold from the store.
+func (s *Store) TotalPriceOfProductsLeft(w io.Writer) {
+	var total float64
+	for _, v := range s.AvailableProducts {
+		if v.InStock() {
+			total += (float64(v.Quantity) * v.Price)
+		}
 	}
 
-	siDisplay := SoldItemsDisplay{
-		TotalPrice: totalPrice,
-		SoldItems:  si,
+	fmt.Fprintf(w, "The total price of products left in store is %.2f\n", total)
+}
+
+// TotalPriceOfProductsSold displays all products that has been sold from the store.
+func (s *Store) TotalPriceOfProductsSold(w io.Writer) {
+	var total float64
+	for _, v := range s.Orders {
+		total += (float64(v.QuantitySold) * v.PriceSold)
 	}
 
-	jsonDisplay, err := json.MarshalIndent(siDisplay, "", " ")
-	if err != nil {
-		fmt.Fprintln(w, "error: Could not encode JSON")
-		return
-	}
-
-	fmt.Fprintln(w, string(jsonDisplay))
+	fmt.Fprintf(w, "The total price of products sold is %.2f\n", total)
 }

@@ -2,6 +2,7 @@ package product
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 )
@@ -12,10 +13,6 @@ import (
 type StoreProduct interface {
 	Name() string
 
-	GetQuantity() int
-
-	GetPrice() string
-
 	GetDescription() string
 
 	GetModel() string
@@ -25,25 +22,38 @@ type StoreProduct interface {
 	GetProductType() string
 
 	GetFeatures() []string
+}
 
-	Sell(quantity int)
+// IsValid is a set which stores all valid product types
+var IsValid = map[string]bool{
+	"accessory": true,
+	"car":       true,
 }
 
 // Product models a product which can be placed in the store.
 type Product struct {
-	ID string
 	StoreProduct
+	Quantity int
+	Price    float64
 }
 
-// DisplayProduct prints all available products to the command line
+// DisplayProduct prints all available products an io.Writer
 func (c *Product) DisplayProduct(w io.Writer) {
-	if _, err := json.MarshalIndent(c.StoreProduct, "", " "); err != nil {
+	json, err := json.MarshalIndent(c.StoreProduct, "", " ")
+	if err != nil {
 		log.Println("could not display products: %w", err)
 	}
+
+	fmt.Fprintln(w, string(json))
 }
 
 // InStock checks if a product is in stock. It prints a response if product
 // is in stock or otherwise.
 func (c *Product) InStock() bool {
-	return c.GetQuantity() > 1
+	return c.Quantity > 1
+}
+
+// Sell alters the Quantity of an Accessory based on the Quantity parameter passed in.
+func (c *Product) Sell(Quantity int) {
+	c.Quantity = c.Quantity - Quantity
 }
