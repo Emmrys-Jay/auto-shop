@@ -50,9 +50,10 @@ go run main.go
 ```
 
 - Demo output should be in form specified in the screenshot below.
+![Screenshot from 2023-01-09 04-21-20](https://user-images.githubusercontent.com/63949797/211236434-7617a53c-93b4-4e54-b85d-a78721542c80.png)
+![Screenshot from 2023-01-09 04-21-28](https://user-images.githubusercontent.com/63949797/211236437-26130ea6-d21b-443b-816e-18b547ee9eea.png)
+![Screenshot from 2023-01-09 04-21-33](https://user-images.githubusercontent.com/63949797/211236440-e40ca21c-8784-45cf-8c00-819894e26d1b.png)
 
-![Screenshot from 2022-11-04 13-34-10](https://user-images.githubusercontent.com/63949797/200057365-2798a6c7-8ee6-47c0-9ca3-d6293e511b32.png)
-![Screenshot from 2022-11-04 13-34-14](https://user-images.githubusercontent.com/63949797/200057372-d8991411-7e9a-43d5-8929-acd69df4f5e7.png)
 
 
 - Play around with the store methods in `main.go` to simulate how an auto store 
