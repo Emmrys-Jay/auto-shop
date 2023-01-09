@@ -12,7 +12,7 @@ import (
 )
 
 type (
-	// Store models the store for available products and sold products
+	// Store models the store for available products, sold products and orders
 	Store struct {
 		AvailableProducts map[string]*product.Product
 		SoldProducts      map[string]*SoldItems
@@ -34,13 +34,6 @@ type (
 		QuantitySold int     `json:"quantity_sold"`
 	}
 )
-
-// AddProductType adds a product type to the list of valid product types
-func AddProductType(w io.Writer, productType string) {
-	product.IsValid[productType] = true
-
-	fmt.Fprintf(w, "Successfully added a product of type %s", productType)
-}
 
 // AddProduct adds new products to the store
 func (s *Store) AddProducts(w io.Writer, req []product.Product) []string {
@@ -83,7 +76,7 @@ func (s *Store) AddProducts(w io.Writer, req []product.Product) []string {
 	return ids
 }
 
-// ListProducts prints all products available in the store
+// ListProducts writes all products available in the store to w
 func (s *Store) ListProducts(w io.Writer) {
 	for _, v := range s.AvailableProducts {
 		if v.InStock() {
@@ -92,8 +85,8 @@ func (s *Store) ListProducts(w io.Writer) {
 	}
 }
 
-// SellProduct sells a product by updating its quantity, and adds the sold product to
-// the store for products sold.
+// SellProduct sells a product by updating its quantity, and adds the product to
+// the store for products sold and orders
 func (s *Store) SellProduct(w io.Writer, id string, quantity int) {
 	var product *product.Product
 	if _, ok := s.AvailableProducts[id]; ok {
@@ -224,4 +217,11 @@ func (s *Store) AddToProductQuantity(w io.Writer, id string, quantity int) {
 
 	fmt.Fprintf(w, "You successfully added %d %s(s) with id: %s\n", quantity, product.Name(), id)
 
+}
+
+// AddProductType adds a product type to the list of valid product types
+func AddProductType(w io.Writer, productType string) {
+	product.IsValid[productType] = true
+
+	fmt.Fprintf(w, "Successfully added a product of type %s", productType)
 }

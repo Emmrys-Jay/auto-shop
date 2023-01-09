@@ -53,7 +53,7 @@ func (c *Product) InStock() bool {
 	return c.Quantity > 1
 }
 
-// Sell alters the Quantity of an Accessory based on the Quantity parameter passed in.
+// Sell alters the Quantity of a Product based on the Quantity parameter passed in.
 func (c *Product) Sell(Quantity int) {
 	c.Quantity = c.Quantity - Quantity
 }
