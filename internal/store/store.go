@@ -19,13 +19,6 @@ type (
 		Orders            map[string]*OrderedItems
 	}
 
-	// SoldItemsDisplay models the structure products will be displayed from
-	// the sold items store
-	SoldItemsDisplay struct {
-		TotalPrice float64     `json:"total_price"`
-		SoldItems  []SoldItems `json:"products_sold"`
-	}
-
 	// SoldItems is a struct which models a sold item
 	SoldItems struct {
 		ProductID    string `json:"product_id"`
@@ -132,7 +125,7 @@ func (s *Store) SellProduct(w io.Writer, id string, quantity int) {
 	fmt.Fprintf(w, "Congrats! You just sold %d %s(s), with id %v\n", quantity, product.Name(), id)
 }
 
-// NoOfProductsForSale calculates the number of products available in the store
+// NoOfProductsForSale writes the number of products available in the store
 func (s *Store) NoOfProductsForSale(w io.Writer) {
 	quantity := 0
 
@@ -145,7 +138,7 @@ func (s *Store) NoOfProductsForSale(w io.Writer) {
 	fmt.Fprintf(w, "There are %v products up for sale\n", quantity)
 }
 
-// ListSoldItems displays all products that has been sold from the store.
+// ListSoldItems writes all products that has been sold from the store to w.
 func (s *Store) ListSoldItems(w io.Writer) {
 	for _, v := range s.SoldProducts {
 		result, err := json.MarshalIndent(v, "", "\t")
@@ -157,7 +150,7 @@ func (s *Store) ListSoldItems(w io.Writer) {
 	}
 }
 
-// ListOrderedItems displays all products that has been sold from the store.
+// ListOrderedItems writes all orders to w.
 func (s *Store) ListOrderedItems(w io.Writer) {
 	for _, v := range s.Orders {
 		result, err := json.MarshalIndent(v, "", "\t")
@@ -169,7 +162,7 @@ func (s *Store) ListOrderedItems(w io.Writer) {
 	}
 }
 
-// TotalPriceOfProductsLeft displays all products that has been sold from the store.
+// TotalPriceOfProductsLeft writes the total price of all products left to w.
 func (s *Store) TotalPriceOfProductsLeft(w io.Writer) {
 	var total float64
 	for _, v := range s.AvailableProducts {
@@ -181,7 +174,7 @@ func (s *Store) TotalPriceOfProductsLeft(w io.Writer) {
 	fmt.Fprintf(w, "The total price of products left in store is %.2f\n", total)
 }
 
-// TotalPriceOfProductsSold displays all products that has been sold from the store.
+// TotalPriceOfProductsSold writes the total price of all products sold to w.
 func (s *Store) TotalPriceOfProductsSold(w io.Writer) {
 	var total float64
 	for _, v := range s.Orders {
@@ -189,4 +182,46 @@ func (s *Store) TotalPriceOfProductsSold(w io.Writer) {
 	}
 
 	fmt.Fprintf(w, "The total price of products sold is %.2f\n", total)
+}
+
+// UpdateProductPrice updates the price of a product. It writes either an error or
+// success statement to w.
+func (s *Store) UpdateProductPrice(w io.Writer, id string, price float64) {
+	var product *product.Product
+	if _, ok := s.AvailableProducts[id]; !ok {
+		fmt.Fprintln(w, "Product you specifed does not exist")
+		return
+	}
+
+	product = s.AvailableProducts[id]
+	if price > 0 {
+		product.Price = price
+	} else {
+		fmt.Fprintln(w, "Invalid price")
+		return
+	}
+
+	fmt.Fprintf(w, "You successfully updated the price of %s with id: %s\n", product.Name(), id)
+
+}
+
+// AddToProductQuantity updates the quantity of a product. It writes either an error or
+// success statement to w.
+func (s *Store) AddToProductQuantity(w io.Writer, id string, quantity int) {
+	var product *product.Product
+	if _, ok := s.AvailableProducts[id]; !ok {
+		fmt.Fprintln(w, "Product you specifed does not exist")
+		return
+	}
+
+	product = s.AvailableProducts[id]
+	if quantity > 0 {
+		product.Quantity += quantity
+	} else {
+		fmt.Fprintln(w, "Invalid Quantity: You can only increase product quantity through this method")
+		return
+	}
+
+	fmt.Fprintf(w, "You successfully added %d %s(s) with id: %s\n", quantity, product.Name(), id)
+
 }
